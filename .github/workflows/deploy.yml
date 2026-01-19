@@ -26,15 +26,17 @@ jobs:
 
       - name: Build project
         run: npm run build
+        env:
+          GEMINI_API_KEY: dummy
 
-      # 👇 关键调试：看看 dist 里到底有什么
-      - name: List dist contents
-        run: |
-          echo "===== dist directory ====="
-          ls -la dist
-          echo "===== assets directory ====="
-          ls -la dist/assets || echo "NO ASSETS FOLDER"
+      - name: Add .nojekyll
+        run: touch dist/.nojekyll
 
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
       - name: Add .nojekyll
         run: |
           touch dist/.nojekyll

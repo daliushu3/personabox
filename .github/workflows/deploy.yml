@@ -27,6 +27,14 @@ jobs:
       - name: Build project
         run: npm run build
 
+      # 👇 关键调试：看看 dist 里到底有什么
+      - name: List dist contents
+        run: |
+          echo "===== dist directory ====="
+          ls -la dist
+          echo "===== assets directory ====="
+          ls -la dist/assets || echo "NO ASSETS FOLDER"
+
       - name: Add .nojekyll
         run: |
           touch dist/.nojekyll
@@ -35,4 +43,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist          github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist

@@ -39,51 +39,69 @@ const CardList: React.FC = () => {
     }
   };
 
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('确定要删除这张名片吗？')) {
+      deleteCard(id);
+      setCards(getCards());
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0c10] text-slate-300">
-      <header className="sticky top-0 z-20 bg-[#0a0c10]/90 backdrop-blur-lg border-b border-blue-500/20 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          {/* Wrap text with special characters in braces to avoid JSX parser issues */}
-          <button onClick={() => navigate('/')} className="text-slate-500 hover:text-blue-400 font-orbitron">{"<< HOME"}</button>
-          <div className="h-6 w-px bg-slate-800"></div>
-          <h2 className="font-orbitron tracking-[0.2em] text-lg text-slate-100 uppercase">Archive_System.v2</h2>
+      <header className="sticky top-0 z-20 bg-[#0a0c10]/95 backdrop-blur-lg border-b border-blue-500/20 px-4 md:px-8 py-3 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center justify-between md:justify-start gap-4 md:gap-6">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/')} className="text-slate-500 hover:text-blue-400 font-orbitron">{"<< HOME"}</button>
+            <div className="h-4 w-px bg-slate-800"></div>
+            <h2 className="font-orbitron tracking-widest text-sm md:text-lg text-slate-100 uppercase">Archives</h2>
+          </div>
+          <span className="text-[10px] font-orbitron bg-blue-900/30 text-blue-400 px-2 py-0.5 border border-blue-500/20 rounded">
+            COUNT: {cards.length}
+          </span>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex bg-slate-900 rounded-sm border border-slate-800 p-0.5 font-orbitron text-[10px]">
+        <div className="flex flex-wrap items-center gap-3 justify-center md:justify-end">
+          <div className="flex bg-slate-900 rounded border border-slate-800 p-0.5 font-orbitron text-[9px]">
             <button 
               onClick={() => setViewMode('name-only')}
-              className={`px-3 py-1 uppercase transition-all ${viewMode === 'name-only' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+              className={`px-3 py-1 transition-all ${viewMode === 'name-only' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
             >
-              Labels
+              LABELS
             </button>
             <button 
               onClick={() => setViewMode('name-photo')}
-              className={`px-3 py-1 uppercase transition-all ${viewMode === 'name-photo' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+              className={`px-3 py-1 transition-all ${viewMode === 'name-photo' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
             >
-              Files
+              FILES
             </button>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleExport} className="text-[10px] font-orbitron border border-slate-700 px-3 py-1 hover:border-blue-500 transition-colors">EXP_JSON</button>
-            <label className="text-[10px] font-orbitron border border-slate-700 px-3 py-1 hover:border-blue-500 transition-colors cursor-pointer">
-              IMP_JSON
+            <button onClick={handleExport} className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors">EXP</button>
+            <label className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors cursor-pointer">
+              IMP
               <input type="file" accept=".json" onChange={handleImport} className="hidden" />
             </label>
+            <button 
+              onClick={() => navigate('/add')}
+              className="text-[9px] font-orbitron bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-500 transition-colors"
+            >
+              + NEW
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="p-10 max-w-7xl mx-auto">
+      <main className="p-4 md:p-10 max-w-7xl mx-auto">
         {cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] font-orbitron text-slate-700 space-y-4">
-            <div className="text-6xl opacity-20">NULL_POINTER</div>
-            <button onClick={() => navigate('/add')} className="px-6 py-2 border border-slate-700 text-xs hover:border-blue-500 transition-colors">INITIATE_NEW_ENTRY</button>
+          <div className="flex flex-col items-center justify-center h-[50vh] font-orbitron text-slate-700 space-y-4">
+            <div className="text-4xl md:text-6xl opacity-20">NULL_ARCHIVE</div>
+            <button onClick={() => navigate('/add')} className="px-6 py-2 border border-slate-700 text-[10px] hover:border-blue-500 transition-colors">INITIALIZE_ENTRY</button>
           </div>
         ) : (
           <div className={viewMode === 'name-only' 
-            ? "flex flex-wrap gap-4" 
-            : "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
+            ? "flex flex-wrap gap-3 justify-center md:justify-start" 
+            : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
           }>
             {cards.map((card) => (
               viewMode === 'name-only' ? (
@@ -91,11 +109,10 @@ const CardList: React.FC = () => {
                 <div 
                   key={card.id}
                   onClick={() => navigate(`/detail/${card.id}`)}
-                  className="group relative h-12 flex items-center bg-slate-900 border-l-4 border-blue-500 px-6 cursor-pointer hover:bg-blue-900/20 transition-all"
+                  className="group relative h-10 flex items-center bg-slate-900 border-l-2 border-blue-500 px-4 cursor-pointer hover:bg-blue-900/20 transition-all w-full sm:w-auto min-w-[120px]"
                 >
-                  <div className="absolute -top-3 left-0 bg-blue-600 text-[8px] font-orbitron px-2 py-0.5 text-white">ID-{card.id.slice(0,4)}</div>
-                  <span className="font-light tracking-[0.2em] text-slate-100">{card.name}</span>
-                  <div className="absolute right-2 text-[8px] opacity-0 group-hover:opacity-40 transition-opacity font-orbitron">{"READ_DATA >>"}</div>
+                  <div className="absolute -top-2 left-0 bg-blue-600 text-[6px] font-orbitron px-1.5 py-0.5 text-white">ID-{card.id.slice(0,4)}</div>
+                  <span className="text-xs font-light tracking-widest text-slate-100 truncate">{card.name}</span>
                 </div>
               ) : (
                 /* Student File Style */
@@ -108,17 +125,17 @@ const CardList: React.FC = () => {
                     {card.photo ? (
                       <img src={card.photo} alt={card.name} className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-700" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center font-orbitron text-[10px] text-slate-700">NO_IMG</div>
+                      <div className="w-full h-full flex items-center justify-center font-orbitron text-[8px] text-slate-700">NO_IMG</div>
                     )}
                     <div className="absolute inset-0 scanline opacity-20 pointer-events-none"></div>
                   </div>
-                  <div className="p-3 border-t border-slate-800 bg-slate-950/80">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <div className="text-[8px] font-orbitron text-blue-500 mb-0.5">SUBJECT_NAME</div>
-                        <div className="text-sm font-bold tracking-wider text-slate-100 truncate">{card.name}</div>
+                  <div className="p-2 md:p-3 border-t border-slate-800 bg-slate-950/80">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1 truncate">
+                        <div className="text-[7px] font-orbitron text-blue-500 mb-0.5">SUBJECT</div>
+                        <div className="text-[11px] md:text-sm font-bold tracking-wider text-slate-100 truncate">{card.name}</div>
                       </div>
-                      <div className="text-[8px] font-orbitron text-slate-600">{card.gender || 'N/A'}</div>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(card.id, e); }} className="text-xs text-slate-700 hover:text-red-500 ml-2">×</button>
                     </div>
                   </div>
                 </div>

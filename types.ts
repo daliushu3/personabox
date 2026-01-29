@@ -11,6 +11,7 @@ export interface CharacterCard {
   eyeColor: string;
   hairStyle: string;
   
+  tags: string[]; // Added tags
   personality: string;
   hobbies: string;
   others: string;
@@ -18,3 +19,4 @@ export interface CharacterCard {
 }
 
 export type ViewMode = 'name-only' | 'name-photo';
+export type SortType = 'newest' | 'oldest' | 'alpha';

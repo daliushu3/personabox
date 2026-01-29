@@ -1,17 +1,54 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCards, exportCards, importCards, deleteCard } from '../utils/storage';
-import { CharacterCard, ViewMode } from '../types';
+import { CharacterCard, ViewMode, SortType } from '../types';
 
 const CardList: React.FC = () => {
   const navigate = useNavigate();
   const [cards, setCards] = useState<CharacterCard[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('name-photo');
+  const [viewMode, setViewMode] = useState<ViewMode>('name-only'); // Default changed to name-only
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortType>('newest');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   useEffect(() => {
     setCards(getCards());
   }, []);
+
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    cards.forEach(c => (c.tags || []).forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [cards]);
+
+  const filteredAndSortedCards = useMemo(() => {
+    let result = [...cards];
+
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        (c.tags || []).some(t => t.toLowerCase().includes(q))
+      );
+    }
+
+    // Tag filter
+    if (selectedTag) {
+      result = result.filter(c => (c.tags || []).includes(selectedTag));
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortBy === 'newest') return b.createdAt - a.createdAt;
+      if (sortBy === 'oldest') return a.createdAt - b.createdAt;
+      if (sortBy === 'alpha') return a.name.localeCompare(b.name, 'zh');
+      return 0;
+    });
+
+    return result;
+  }, [cards, searchQuery, sortBy, selectedTag]);
 
   const handleExport = () => {
     const data = exportCards();
@@ -49,61 +86,107 @@ const CardList: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-slate-300">
-      <header className="sticky top-0 z-20 bg-[#0a0c10]/95 backdrop-blur-lg border-b border-blue-500/20 px-4 md:px-8 py-3 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center justify-between md:justify-start gap-4 md:gap-6">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="text-slate-500 hover:text-blue-400 font-orbitron">{"<< HOME"}</button>
-            <div className="h-4 w-px bg-slate-800"></div>
-            <h2 className="font-orbitron tracking-widest text-sm md:text-lg text-slate-100 uppercase">Archives</h2>
+      <header className="sticky top-0 z-20 bg-[#0a0c10]/95 backdrop-blur-lg border-b border-blue-500/20 px-4 md:px-8 py-3">
+        <div className="max-w-7xl mx-auto flex flex-col gap-4">
+          {/* Top Row: Title & Basic Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button onClick={() => navigate('/')} className="text-slate-500 hover:text-blue-400 font-orbitron">{"<< HOME"}</button>
+              <div className="h-4 w-px bg-slate-800"></div>
+              <h2 className="font-orbitron tracking-widest text-sm md:text-lg text-slate-100 uppercase">Archives</h2>
+            </div>
+            
+            <div className="flex gap-2">
+              <button onClick={handleExport} className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors">EXP</button>
+              <label className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors cursor-pointer">
+                IMP
+                <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+              </label>
+              <button 
+                onClick={() => navigate('/add')}
+                className="text-[9px] font-orbitron bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-500 transition-colors"
+              >
+                + NEW
+              </button>
+            </div>
           </div>
-          <span className="text-[10px] font-orbitron bg-blue-900/30 text-blue-400 px-2 py-0.5 border border-blue-500/20 rounded">
-            COUNT: {cards.length}
-          </span>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3 justify-center md:justify-end">
-          <div className="flex bg-slate-900 rounded border border-slate-800 p-0.5 font-orbitron text-[9px]">
-            <button 
-              onClick={() => setViewMode('name-only')}
-              className={`px-3 py-1 transition-all ${viewMode === 'name-only' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+          {/* Control Panel: Search, Sort, View, Tags */}
+          <div className="flex flex-wrap items-center gap-3 bg-slate-900/50 p-2 border border-slate-800 rounded">
+            {/* Search */}
+            <div className="flex-1 min-w-[150px] relative">
+              <input 
+                type="text" 
+                placeholder="SEARCH ARCHIVE..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded px-8 py-1.5 text-[10px] font-orbitron focus:outline-none focus:border-blue-500"
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30 text-[10px]">🔍</span>
+            </div>
+
+            {/* Sort Dropdown */}
+            <select 
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortType)}
+              className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-[9px] font-orbitron text-slate-400 focus:outline-none focus:border-blue-500"
             >
-              LABELS
-            </button>
-            <button 
-              onClick={() => setViewMode('name-photo')}
-              className={`px-3 py-1 transition-all ${viewMode === 'name-photo' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
-            >
-              FILES
-            </button>
+              <option value="newest">NEWEST_FIRST</option>
+              <option value="oldest">OLDEST_FIRST</option>
+              <option value="alpha">ALPHABETICAL</option>
+            </select>
+
+            {/* View Toggle */}
+            <div className="flex bg-slate-950 rounded border border-slate-800 p-0.5 font-orbitron text-[9px]">
+              <button 
+                onClick={() => setViewMode('name-only')}
+                className={`px-3 py-1 transition-all ${viewMode === 'name-only' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+              >
+                LABELS
+              </button>
+              <button 
+                onClick={() => setViewMode('name-photo')}
+                className={`px-3 py-1 transition-all ${viewMode === 'name-photo' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+              >
+                FILES
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleExport} className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors">EXP</button>
-            <label className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors cursor-pointer">
-              IMP
-              <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-            </label>
-            <button 
-              onClick={() => navigate('/add')}
-              className="text-[9px] font-orbitron bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-500 transition-colors"
-            >
-              + NEW
-            </button>
-          </div>
+
+          {/* Tag Filter Bar */}
+          {allTags.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <button 
+                onClick={() => setSelectedTag(null)}
+                className={`text-[8px] font-orbitron px-2 py-0.5 border rounded-full whitespace-nowrap transition-all ${!selectedTag ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'}`}
+              >
+                ALL_TAGS
+              </button>
+              {allTags.map(tag => (
+                <button 
+                  key={tag}
+                  onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                  className={`text-[8px] font-orbitron px-2 py-0.5 border rounded-full whitespace-nowrap transition-all ${selectedTag === tag ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'}`}
+                >
+                  {tag.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
       <main className="p-4 md:p-10 max-w-7xl mx-auto">
-        {cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] font-orbitron text-slate-700 space-y-4">
-            <div className="text-4xl md:text-6xl opacity-20">NULL_ARCHIVE</div>
-            <button onClick={() => navigate('/add')} className="px-6 py-2 border border-slate-700 text-[10px] hover:border-blue-500 transition-colors">INITIALIZE_ENTRY</button>
+        {filteredAndSortedCards.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[40vh] font-orbitron text-slate-700 space-y-4">
+            <div className="text-4xl md:text-6xl opacity-20">NO_MATCH_FOUND</div>
           </div>
         ) : (
           <div className={viewMode === 'name-only' 
             ? "flex flex-wrap gap-3 justify-center md:justify-start" 
             : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
           }>
-            {cards.map((card) => (
+            {filteredAndSortedCards.map((card) => (
               viewMode === 'name-only' ? (
                 /* Archive Label Style */
                 <div 
@@ -112,10 +195,17 @@ const CardList: React.FC = () => {
                   className="group relative h-10 flex items-center bg-slate-900 border-l-2 border-blue-500 px-4 cursor-pointer hover:bg-blue-900/20 transition-all w-full sm:w-auto min-w-[120px]"
                 >
                   <div className="absolute -top-2 left-0 bg-blue-600 text-[6px] font-orbitron px-1.5 py-0.5 text-white">ID-{card.id.slice(0,4)}</div>
-                  <span className="text-xs font-light tracking-widest text-slate-100 truncate">{card.name}</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-light tracking-widest text-slate-100 truncate">{card.name}</span>
+                    <div className="flex gap-1">
+                      {(card.tags || []).slice(0, 2).map(t => (
+                        <span key={t} className="text-[6px] text-blue-500/60 uppercase">#{t}</span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : (
-                /* Student File Style */
+                /* Student File Style (Scaled images) */
                 <div 
                   key={card.id}
                   onClick={() => navigate(`/detail/${card.id}`)}
@@ -134,6 +224,11 @@ const CardList: React.FC = () => {
                       <div className="flex-1 truncate">
                         <div className="text-[7px] font-orbitron text-blue-500 mb-0.5">SUBJECT</div>
                         <div className="text-[11px] md:text-sm font-bold tracking-wider text-slate-100 truncate">{card.name}</div>
+                        <div className="flex gap-1 overflow-hidden h-3">
+                          {(card.tags || []).map(t => (
+                            <span key={t} className="text-[6px] text-slate-600 uppercase">#{t}</span>
+                          ))}
+                        </div>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(card.id, e); }} className="text-xs text-slate-700 hover:text-red-500 ml-2">×</button>
                     </div>

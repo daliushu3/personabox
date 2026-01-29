@@ -16,10 +16,13 @@ const AddEditCard: React.FC = () => {
     weight: '',
     eyeColor: '',
     hairStyle: '',
+    tags: [],
     personality: '',
     hobbies: '',
     others: '',
   });
+
+  const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -35,20 +38,55 @@ const AddEditCard: React.FC = () => {
           weight: card.weight || '',
           eyeColor: card.eyeColor || '',
           hairStyle: card.hairStyle || '',
+          tags: card.tags || [],
           personality: card.personality,
           hobbies: card.hobbies,
           others: card.others,
         });
+        setTagInput((card.tags || []).join(', '));
       }
     }
   }, [id]);
+
+  const compressImage = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        // Compress to JPEG with 0.7 quality to save substantial space
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+    });
+  };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, photo: reader.result as string }));
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result as string);
+        setFormData(prev => ({ ...prev, photo: compressed }));
       };
       reader.readAsDataURL(file);
     }
@@ -59,13 +97,22 @@ const AddEditCard: React.FC = () => {
       alert('请输入名字');
       return;
     }
+    
+    const finalTags = tagInput.split(/[，,]/).map(t => t.trim()).filter(t => t !== '');
+
     const newCard: CharacterCard = {
       id: id || crypto.randomUUID(),
       ...formData,
+      tags: finalTags,
       createdAt: id ? (getCards().find(c => c.id === id)?.createdAt || Date.now()) : Date.now(),
     };
-    saveCard(newCard);
-    navigate('/list');
+    
+    try {
+      saveCard(newCard);
+      navigate('/list');
+    } catch (e) {
+      alert('存储空间已满，请尝试删除一些名片或使用更小的图片。');
+    }
   };
 
   const inputClass = "w-full bg-slate-900/50 border border-slate-700 rounded px-4 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm";
@@ -85,7 +132,6 @@ const AddEditCard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-            {/* Left Column */}
             <div className="md:col-span-4 space-y-6">
               <div>
                 <label className={labelClass}>Subject Name</label>
@@ -99,7 +145,7 @@ const AddEditCard: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <label className={labelClass}>Visual Data</label>
+                <label className={labelClass}>Visual Data (Auto-Compressed)</label>
                 <div className="relative aspect-[3/4] bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden group">
                   {formData.photo ? (
                     <img src={formData.photo} alt="Preview" className="w-full h-full object-cover" />
@@ -108,17 +154,20 @@ const AddEditCard: React.FC = () => {
                   )}
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Tags (Separate with commas)</label>
                 <input 
                   type="text" 
-                  placeholder="IMAGE LINK" 
-                  value={formData.photo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, photo: e.target.value }))}
-                  className={`${inputClass} text-[10px] py-1`}
+                  placeholder="TAG1, TAG2..." 
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            {/* Right Column */}
             <div className="md:col-span-8 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-1">

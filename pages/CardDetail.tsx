@@ -14,6 +14,7 @@ const CardDetail: React.FC = () => {
   const handleCopyMarkdown = () => {
     const md = `
 # 角色档案: ${card.name}
+标签: ${(card.tags || []).join(', ')}
 
 ## 基础信息
 - **性别**: ${card.gender || '未知'}
@@ -53,6 +54,11 @@ ${card.others || '尚无记录'}
             <div className="w-full md:w-auto">
               <div className="text-[9px] font-orbitron text-blue-400 mb-1 tracking-[0.4em]">CHARACTER_ARCHIVE_FILE</div>
               <h1 className="text-3xl md:text-5xl font-bold text-slate-100 tracking-tighter uppercase break-words">{card.name}</h1>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {(card.tags || []).map(tag => (
+                  <span key={tag} className="text-[8px] font-orbitron text-blue-500 px-1 border border-blue-500/30 rounded uppercase">#{tag}</span>
+                ))}
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
               <button onClick={handleCopyMarkdown} className="flex-1 md:flex-none px-3 py-2 border border-blue-500/30 text-blue-400 text-[9px] font-orbitron hover:bg-blue-600 hover:text-white transition-all">COPY_MD</button>

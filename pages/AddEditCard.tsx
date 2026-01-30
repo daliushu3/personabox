@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getCards, saveCard } from '../utils/storage';
 import { CharacterCard } from '../types';
@@ -23,10 +23,16 @@ const AddEditCard: React.FC = () => {
   });
 
   const [tagInput, setTagInput] = useState('');
+  const [allExistingTags, setAllExistingTags] = useState<string[]>([]);
 
   useEffect(() => {
+    const cards = getCards();
+    // Extract unique existing tags for suggestions
+    const tags = new Set<string>();
+    cards.forEach(c => (c.tags || []).forEach(t => tags.add(t)));
+    setAllExistingTags(Array.from(tags).sort());
+
     if (id) {
-      const cards = getCards();
       const card = cards.find(c => c.id === id);
       if (card) {
         setFormData({
@@ -74,7 +80,6 @@ const AddEditCard: React.FC = () => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        // Compress to JPEG with 0.7 quality to save substantial space
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
     });
@@ -89,6 +94,16 @@ const AddEditCard: React.FC = () => {
         setFormData(prev => ({ ...prev, photo: compressed }));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleQuickAddTag = (tag: string) => {
+    const currentTags = tagInput.split(/[，,]/).map(t => t.trim()).filter(t => t !== '');
+    if (!currentTags.includes(tag)) {
+      const newValue = tagInput.trim() 
+        ? (tagInput.trim().endsWith(',') || tagInput.trim().endsWith('，') ? `${tagInput.trim()} ${tag}` : `${tagInput.trim()}, ${tag}`)
+        : tag;
+      setTagInput(newValue);
     }
   };
 
@@ -145,14 +160,25 @@ const AddEditCard: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <label className={labelClass}>Visual Data (Auto-Compressed)</label>
+                <label className={labelClass}>Visual Data</label>
                 <div className="relative aspect-[3/4] bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden group">
                   {formData.photo ? (
                     <img src={formData.photo} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
                     <div className="text-center text-slate-700 font-orbitron text-[9px]">NO_DATA</div>
                   )}
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" title="点击上传图片" />
+                </div>
+                {/* Re-added URL input */}
+                <div className="mt-2">
+                  <label className="text-[8px] text-slate-500 uppercase block mb-1">External Link / Base64</label>
+                  <input 
+                    type="text" 
+                    placeholder="HTTP://... OR DATA:IMAGE/..." 
+                    value={formData.photo}
+                    onChange={(e) => setFormData(prev => ({ ...prev, photo: e.target.value }))}
+                    className={`${inputClass} text-[10px] py-1 opacity-70 focus:opacity-100`}
+                  />
                 </div>
               </div>
 
@@ -165,6 +191,25 @@ const AddEditCard: React.FC = () => {
                   onChange={(e) => setTagInput(e.target.value)}
                   className={inputClass}
                 />
+                
+                {/* Tag Suggestions Section */}
+                {allExistingTags.length > 0 && (
+                  <div className="mt-3">
+                    <label className="text-[8px] text-blue-500/50 uppercase block mb-2">Existing Tags Suggestion</label>
+                    <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
+                      {allExistingTags.map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleQuickAddTag(tag)}
+                          className="text-[8px] font-orbitron px-2 py-0.5 bg-slate-900 border border-slate-800 text-slate-500 hover:border-blue-500 hover:text-blue-400 transition-all rounded-sm uppercase"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

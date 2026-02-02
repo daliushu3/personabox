@@ -8,10 +8,21 @@ const CardList: React.FC = () => {
   const navigate = useNavigate();
   const [cards, setCards] = useState<CharacterCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('name-only');
+  
+  // 1. 初始化视图模式：优先从 localStorage 读取
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('nexus_vault_view_mode');
+    return (saved as ViewMode) || 'name-only';
+  });
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  // 2. 监听视图模式变化并持久化
+  useEffect(() => {
+    localStorage.setItem('nexus_vault_view_mode', viewMode);
+  }, [viewMode]);
 
   const fetchCards = async () => {
     setLoading(true);
@@ -90,6 +101,9 @@ const CardList: React.FC = () => {
     }
   };
 
+  // 统一按钮基础样式，确保在不同标签下对齐一致
+  const actionBtnClass = "flex items-center justify-center min-w-[44px] h-8 text-[9px] font-orbitron border border-slate-700 px-3 hover:border-blue-500 transition-colors leading-none";
+
   return (
     <div className="min-h-screen bg-[#0a0c10] text-slate-300">
       <header className="sticky top-0 z-20 bg-[#0a0c10]/95 backdrop-blur-lg border-b border-blue-500/20 px-4 md:px-8 py-3">
@@ -101,15 +115,15 @@ const CardList: React.FC = () => {
               <h2 className="font-orbitron tracking-widest text-sm md:text-lg text-slate-100 uppercase">Vault_Index</h2>
             </div>
             
-            <div className="flex gap-2">
-              <button onClick={handleExport} className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors">EXP</button>
-              <label className="text-[9px] font-orbitron border border-slate-700 px-2 py-1.5 hover:border-blue-500 transition-colors cursor-pointer">
+            <div className="flex gap-2 items-center">
+              <button onClick={handleExport} className={actionBtnClass}>EXP</button>
+              <label className={`${actionBtnClass} cursor-pointer`}>
                 IMP
                 <input type="file" accept=".json" onChange={handleImport} className="hidden" />
               </label>
               <button 
                 onClick={() => navigate('/add')}
-                className="text-[9px] font-orbitron bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-500 transition-colors"
+                className="flex items-center justify-center h-8 text-[9px] font-orbitron bg-blue-600 px-4 text-white hover:bg-blue-500 transition-colors leading-none"
               >
                 + NEW
               </button>
@@ -123,7 +137,7 @@ const CardList: React.FC = () => {
                 placeholder="QUERY ARCHIVE..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded px-8 py-1.5 text-[10px] font-orbitron focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded px-8 py-2 text-[10px] font-orbitron focus:outline-none focus:border-blue-500 leading-none"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30 text-[10px]">🔍</span>
             </div>
@@ -131,7 +145,7 @@ const CardList: React.FC = () => {
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortType)}
-              className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-[9px] font-orbitron text-slate-400 focus:outline-none focus:border-blue-500"
+              className="bg-slate-950 border border-slate-800 rounded px-2 h-9 text-[9px] font-orbitron text-slate-400 focus:outline-none focus:border-blue-500"
             >
               <option value="newest">TIMESTAMP_DESC</option>
               <option value="oldest">TIMESTAMP_ASC</option>
@@ -141,13 +155,13 @@ const CardList: React.FC = () => {
             <div className="flex bg-slate-950 rounded border border-slate-800 p-0.5 font-orbitron text-[9px]">
               <button 
                 onClick={() => setViewMode('name-only')}
-                className={`px-3 py-1 transition-all ${viewMode === 'name-only' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                className={`px-3 py-1.5 transition-all ${viewMode === 'name-only' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500'}`}
               >
                 LABELS
               </button>
               <button 
                 onClick={() => setViewMode('name-photo')}
-                className={`px-3 py-1 transition-all ${viewMode === 'name-photo' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                className={`px-3 py-1.5 transition-all ${viewMode === 'name-photo' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500'}`}
               >
                 FILES
               </button>
@@ -158,7 +172,7 @@ const CardList: React.FC = () => {
             <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
               <button 
                 onClick={() => setSelectedTag(null)}
-                className={`text-[8px] font-orbitron px-2 py-0.5 border rounded-full whitespace-nowrap transition-all ${!selectedTag ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'}`}
+                className={`text-[8px] font-orbitron px-3 py-1 border rounded-full whitespace-nowrap transition-all ${!selectedTag ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'}`}
               >
                 CLEAR_FILTER
               </button>
@@ -166,7 +180,7 @@ const CardList: React.FC = () => {
                 <button 
                   key={tag}
                   onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
-                  className={`text-[8px] font-orbitron px-2 py-0.5 border rounded-full whitespace-nowrap transition-all ${selectedTag === tag ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'}`}
+                  className={`text-[8px] font-orbitron px-3 py-1 border rounded-full whitespace-nowrap transition-all ${selectedTag === tag ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'}`}
                 >
                   {tag.toUpperCase()}
                 </button>

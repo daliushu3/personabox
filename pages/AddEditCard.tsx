@@ -1,12 +1,13 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getCards, saveCard } from '../utils/storage';
+import { getCardById, saveCard, getCards } from '../utils/storage';
 import { CharacterCard } from '../types';
 
 const AddEditCard: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<Omit<CharacterCard, 'id' | 'createdAt'>>({
     name: '',
     photo: '',
@@ -26,32 +27,35 @@ const AddEditCard: React.FC = () => {
   const [allExistingTags, setAllExistingTags] = useState<string[]>([]);
 
   useEffect(() => {
-    const cards = getCards();
-    // Extract unique existing tags for suggestions
-    const tags = new Set<string>();
-    cards.forEach(c => (c.tags || []).forEach(t => tags.add(t)));
-    setAllExistingTags(Array.from(tags).sort());
+    const init = async () => {
+      const cards = await getCards();
+      const tags = new Set<string>();
+      cards.forEach(c => (c.tags || []).forEach(t => tags.add(t)));
+      setAllExistingTags(Array.from(tags).sort());
 
-    if (id) {
-      const card = cards.find(c => c.id === id);
-      if (card) {
-        setFormData({
-          name: card.name,
-          photo: card.photo,
-          gender: card.gender || '',
-          birthday: card.birthday || '',
-          height: card.height || '',
-          weight: card.weight || '',
-          eyeColor: card.eyeColor || '',
-          hairStyle: card.hairStyle || '',
-          tags: card.tags || [],
-          personality: card.personality,
-          hobbies: card.hobbies,
-          others: card.others,
-        });
-        setTagInput((card.tags || []).join(', '));
+      if (id) {
+        const card = await getCardById(id);
+        if (card) {
+          setFormData({
+            name: card.name,
+            photo: card.photo,
+            gender: card.gender || '',
+            birthday: card.birthday || '',
+            height: card.height || '',
+            weight: card.weight || '',
+            eyeColor: card.eyeColor || '',
+            hairStyle: card.hairStyle || '',
+            tags: card.tags || [],
+            personality: card.personality,
+            hobbies: card.hobbies,
+            others: card.others,
+          });
+          setTagInput((card.tags || []).join(', '));
+        }
       }
-    }
+      setLoading(false);
+    };
+    init();
   }, [id]);
 
   const compressImage = (base64Str: string): Promise<string> => {
@@ -60,8 +64,8 @@ const AddEditCard: React.FC = () => {
       img.src = base64Str;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 1000;
+        const MAX_WIDTH = 1000;
+        const MAX_HEIGHT = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -80,7 +84,7 @@ const AddEditCard: React.FC = () => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
       };
     });
   };
@@ -107,7 +111,7 @@ const AddEditCard: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       alert('请输入名字');
       return;
@@ -119,19 +123,25 @@ const AddEditCard: React.FC = () => {
       id: id || crypto.randomUUID(),
       ...formData,
       tags: finalTags,
-      createdAt: id ? (getCards().find(c => c.id === id)?.createdAt || Date.now()) : Date.now(),
+      createdAt: id ? (await getCardById(id))?.createdAt || Date.now() : Date.now(),
     };
     
     try {
-      saveCard(newCard);
+      await saveCard(newCard);
       navigate('/list');
     } catch (e) {
-      alert('存储空间已满，请尝试删除一些名片或使用更小的图片。');
+      alert('存储过程发生异常，请检查浏览器设置。');
     }
   };
 
   const inputClass = "w-full bg-slate-900/50 border border-slate-700 rounded px-4 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm";
   const labelClass = "block text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-1 font-orbitron";
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center font-orbitron text-blue-500 animate-pulse tracking-widest">
+      INITIALIZING_VAULT...
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#0a0c10] py-6 md:py-12 px-4">
@@ -139,7 +149,7 @@ const AddEditCard: React.FC = () => {
         <div className="bg-slate-950/80 p-5 md:p-8">
           <div className="flex justify-between items-center mb-8 border-b border-blue-500/20 pb-4">
             <h2 className="text-xl font-orbitron text-slate-100 tracking-widest">
-              [ {id ? 'EDIT_ARCHIVE' : 'NEW_ENTRY'} ]
+              [ {id ? 'UPDATE_ARCHIVE' : 'NEW_ENTRY'} ]
             </h2>
             <button onClick={() => navigate(-1)} className="text-slate-500 hover:text-blue-400 text-[10px] font-orbitron transition-colors">
               {"<< RETURN"}
@@ -169,7 +179,6 @@ const AddEditCard: React.FC = () => {
                   )}
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" title="点击上传图片" />
                 </div>
-                {/* Re-added URL input */}
                 <div className="mt-2">
                   <label className="text-[8px] text-slate-500 uppercase block mb-1">External Link / Base64</label>
                   <input 
@@ -183,7 +192,7 @@ const AddEditCard: React.FC = () => {
               </div>
 
               <div>
-                <label className={labelClass}>Tags (Separate with commas)</label>
+                <label className={labelClass}>Tags</label>
                 <input 
                   type="text" 
                   placeholder="TAG1, TAG2..." 
@@ -192,10 +201,9 @@ const AddEditCard: React.FC = () => {
                   className={inputClass}
                 />
                 
-                {/* Tag Suggestions Section */}
                 {allExistingTags.length > 0 && (
                   <div className="mt-3">
-                    <label className="text-[8px] text-blue-500/50 uppercase block mb-2">Existing Tags Suggestion</label>
+                    <label className="text-[8px] text-blue-500/50 uppercase block mb-2">Suggestions</label>
                     <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
                       {allExistingTags.map(tag => (
                         <button
